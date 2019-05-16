@@ -1,4 +1,4 @@
-package com.wsg.mclibrary.common.binder;
+package com.wsg.mclib;
 
 import android.os.SystemClock;
 import android.util.Log;
@@ -10,6 +10,7 @@ import com.wsg.mclibrary.common.serial.SerialConfig;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -31,6 +32,16 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
 
     }
 
+    @Override
+    protected boolean onTerminationSendRunnable() {
+        return true;
+    }
+
+    @Override
+    protected boolean onTerminationReceiveRunnable() {
+        return true;
+    }
+
     private byte[] bytes = new byte[]{(byte) 0x01, (byte) 0x05, (byte) 0x55, (byte) 0x5B, (byte) 0xff};
 
     @Override
@@ -38,16 +49,12 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
         if (getSerialPort() != null) {
             try {
                 getSerialPort().getOutputStream().write(bytes);
-//                Log.e("onSendMessage: ", "发送数据" + ByteUtils.byte2hex(bytes));
+                Log.e("onSendMessage: ", "发送数据" + ByteUtils.byte2hex(bytes));
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        try {
-            sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        SystemClock.sleep(2000);
 
     }
 
@@ -69,7 +76,9 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
                 if (available > 0) {
                     size = mInputStream.read(received);
                     if (size > 0) {
-                        onDataReceive(received, size);
+                        byte[] bytes= Arrays.copyOf(received,size);
+                        Log.e("收到数据",ByteUtils.byte2hex(bytes));
+
                     }
                 } else {
                     // 暂停一点时间，免得一直循环造成CPU占用率过高
@@ -95,7 +104,7 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
      */
     private void onDataReceive(byte[] received, int size) {
         // TODO: 2018/3/22 解决粘包、分包等
-//        Log.e("收到数据",ByteUtils.byte2hex(received));
+        Log.e("收到数据",ByteUtils.byte2hex(received));
 
     }
 

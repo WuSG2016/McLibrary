@@ -4,7 +4,6 @@ package com.wsg.mclibrary.common.serial;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.mdeveloper.serialtool.serial;
 import com.wsg.mclibrary.common.CommonConstants;
 import com.wsg.mclibrary.common.config.ParseSerialFile;
 
@@ -28,10 +27,7 @@ public abstract class AbstractSerial extends Thread {
      * 波特率
      */
     private static int SERIAL_BAUD_RATE;
-    /**
-     * 串口配置
-     */
-    private String[] serialCfgStr;
+
 
     private SerialMonitorRunnable serialMonitorRunnable;
 
@@ -43,8 +39,9 @@ public abstract class AbstractSerial extends Thread {
      */
     private static String PORT;
 
-  
+
     private SerialPort serialPort;
+
     private String[] serialDevices;
     private boolean isOpen;
     private OutputStream mOutputStream;
@@ -52,7 +49,6 @@ public abstract class AbstractSerial extends Thread {
     public SerialPort getSerialPort() {
         return serialPort;
     }
-
 
 
     protected ThreadPoolExecutor poolExecutor;
@@ -105,11 +101,7 @@ public abstract class AbstractSerial extends Thread {
                 serialError(103, SerialError.getCodeErrorInfo(102));
                 return;
             }
-            switch (serialConfig.getSerialInitType()) {
-                default:
-                    initAndroidOfficial();
-                    break;
-            }
+            initAndroidOfficial();
 
         }
 
@@ -141,7 +133,7 @@ public abstract class AbstractSerial extends Thread {
             serialConfig.getSerialListener().onSerialError(code, errorMsg);
         }
     }
-    
+
 
     /**
      * 串口配置加载
@@ -198,7 +190,7 @@ public abstract class AbstractSerial extends Thread {
         @Override
         public void run() {
             try {
-                while (true) {
+                while (onTerminationSendRunnable()) {
                     onSendMessage();
                 }
             } catch (Exception e) {
@@ -209,6 +201,19 @@ public abstract class AbstractSerial extends Thread {
 
         }
     }
+
+    /**
+     * 终止线程
+     *
+     * @return
+     */
+    protected abstract boolean onTerminationSendRunnable();
+
+    /**
+     * 终止接收线程
+     * @return
+     */
+    protected abstract boolean onTerminationReceiveRunnable();
 
     /**
      * 发送处理
@@ -229,9 +234,6 @@ public abstract class AbstractSerial extends Thread {
         if (serialPort != null) {
             serialPort.close();
         }
-        if (serialCom != null) {
-            serialCom.Close();
-        }
         if (poolExecutor != null) {
             poolExecutor.shutdown();
         }
@@ -245,7 +247,7 @@ public abstract class AbstractSerial extends Thread {
         @Override
         public void run() {
             try {
-                while (true) {
+                while (onTerminationReceiveRunnable()) {
                     onReceiverSerialData();
                 }
             } catch (Exception e) {

@@ -109,10 +109,7 @@ public class SerialConfig {
             return this;
         }
 
-        public Builder setSerialInitType(int serialInitType) {
-            this.serialInitType = serialInitType;
-            return this;
-        }
+
 
         public SerialConfig builder() {
             return new SerialConfig(this);

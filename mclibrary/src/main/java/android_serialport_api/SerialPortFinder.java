@@ -14,9 +14,10 @@
  * limitations under the License. 
  */
 
-package android.serialport;
+package android_serialport_api;
 
 import android.util.Log;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -40,7 +41,7 @@ public class SerialPortFinder {
             if (mDevices == null) {
                 mDevices = new Vector<File>();
                 File dev = new File("/dev");
-                
+
                 File[] files = dev.listFiles();
 
                 if (files != null) {
@@ -104,6 +105,14 @@ public class SerialPortFinder {
             e.printStackTrace();
         }
         return devices.toArray(new String[devices.size()]);
+    }
+
+    public static SerialPortFinder getInstance() {
+        return SerialPortFinderHolder.SERIALPORTFINDER;
+    }
+
+    private static class SerialPortFinderHolder {
+        private static SerialPortFinder SERIALPORTFINDER = new SerialPortFinder();
     }
 
     public String[] getAllDevicesPath() {
