@@ -1,13 +1,24 @@
 package com.wsg.mclibrary.common.serial;
 
 
+import android.text.TextUtils;
+import android.util.Log;
+
 import com.mdeveloper.serialtool.serial;
 import com.wsg.mclibrary.common.CommonConstants;
 import com.wsg.mclibrary.common.config.ParseSerialFile;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+
+import android_serialport_api.SerialPort;
+import android_serialport_api.SerialPortFinder;
 
 /**
  * @author WuSG
@@ -16,57 +27,142 @@ public abstract class AbstractSerial extends Thread {
     /**
      * 波特率
      */
-    public static int SERIAL_BAUD_RATE = 9600;
+    private static int SERIAL_BAUD_RATE;
     /**
      * 串口配置
      */
-    private String[] serialCfg;
+    private String[] serialCfgStr;
 
-    private SerialMonitorRunnable serialMonitorRunnable = new SerialMonitorRunnable();
+    private SerialMonitorRunnable serialMonitorRunnable;
 
-    private SendMsgRunnable sendMsgRunnable = new SendMsgRunnable();
+    private SendMsgRunnable sendMsgRunnable;
+    protected BufferedInputStream mInputStream;
+
     /**
      * 串口
      */
-    public static String PORT = "ttyS3";
+    private static String PORT;
 
-    public serial serialCom;
+  
+    private SerialPort serialPort;
+    private String[] serialDevices;
+    private boolean isOpen;
+    private OutputStream mOutputStream;
+
+    public SerialPort getSerialPort() {
+        return serialPort;
+    }
 
 
-    public ThreadPoolExecutor poolExecutor = new ThreadPoolExecutor(10, 15, 30, TimeUnit.MINUTES, new LinkedBlockingDeque<Runnable>(), new SerialPortThreadFactory());
 
+    protected ThreadPoolExecutor poolExecutor;
+    /**
+     * 串口配置
+     */
+    private SerialConfig serialConfig;
 
     @Override
     public void run() {
-        initSerial();
+        try {
+            if (checkSerial()) {
+                return;
+            }
+            initSerial();
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
     }
 
-    private void initSerial() {
+    /**
+     * 检查设备是否包含串口
+     */
+    private boolean checkSerial() {
+        serialDevices = SerialPortFinder.getInstance().getAllDevices();
+        Log.e("checkSerial: ", Arrays.toString(serialDevices));
+        if (serialDevices.length <= 0) {
+            serialError(105, SerialError.getCodeErrorInfo(105));
+            return true;
+        }
+        return false;
+    }
+
+    private void initSerial() throws Throwable {
         init();
-        initSerialXml();
         connectSerialPort();
+    }
 
+    private void init() throws Throwable {
+        serialConfig = onSerialConfig();
+        if (serialConfig == null) {
+            serialError(102, SerialError.getCodeErrorInfo(102));
+        } else {
+            if (!TextUtils.isEmpty(serialConfig.getSerialXmlPath())) {
+                initSerialXml();
+            } else if (serialConfig.getPort() != null && serialConfig.getBaudRate() > 0) {
+                PORT = serialConfig.getPort();
+                SERIAL_BAUD_RATE = serialConfig.getBaudRate();
+            } else {
+                serialError(103, SerialError.getCodeErrorInfo(102));
+                return;
+            }
+            switch (serialConfig.getSerialInitType()) {
+                default:
+                    initAndroidOfficial();
+                    break;
+            }
+
+        }
 
     }
 
-    private void init() {
-        serialCfg = new String[]{"ttyS3", "9600", "8", "1", "None"};
-        serialCom = new serial();
+    /**
+     * Android官方串口
+     */
+    private void initAndroidOfficial() {
+
+        try {
+            if (isOpen) {
+                closeSerialPort();
+                isOpen = false;
+            }
+            serialPort = new SerialPort(new File(PORT), SERIAL_BAUD_RATE, 0);
+            mInputStream = new BufferedInputStream(serialPort.getInputStream());
+            mOutputStream = serialPort.getOutputStream();
+            isOpen = true;
+        } catch (IOException e) {
+            serialError(102, SerialError.getCodeErrorInfo(102));
+            isOpen = false;
+            e.printStackTrace();
+        }
     }
+
+    private void serialError(int code, String errorMsg) {
+        if (serialConfig.getSerialListener() != null) {
+            serialConfig.getSerialListener().onSerialError(code, errorMsg);
+        }
+    }
+    
+
+    /**
+     * 串口配置加载
+     *
+     * @return
+     */
+    protected abstract SerialConfig onSerialConfig();
 
     /**
      * 加载XML串口配置文件
      */
     private void initSerialXml() {
-        Boolean isComplete = ParseSerialFile.parseXml(CommonConstants.BOOT_PATH, "serial.xml");
+        if (TextUtils.isEmpty(serialConfig.getSerialXmlPath())) {
+            serialError(104, SerialError.getCodeErrorInfo(104));
+            return;
+        }
+        Boolean isComplete = ParseSerialFile.parseXml(serialConfig.getSerialXmlPath(), "serial.xml");
         if (isComplete) {
             SERIAL_BAUD_RATE = Integer.parseInt(ParseSerialFile.baudrate);
             PORT = ParseSerialFile.port;
         }
-        serialCfg[0] = PORT;
-        serialCfg[1] = String.valueOf(SERIAL_BAUD_RATE);
-        int code = serialCom.OpenPort(serialCfg);
-
     }
 
     @Override
@@ -79,7 +175,9 @@ public abstract class AbstractSerial extends Thread {
      * 连接到串口
      */
     private void connectSerialPort() {
-
+        serialMonitorRunnable = new SerialMonitorRunnable();
+        sendMsgRunnable = new SendMsgRunnable();
+        poolExecutor = new ThreadPoolExecutor(10, 15, 30, TimeUnit.MINUTES, new LinkedBlockingDeque<Runnable>(), new SerialPortThreadFactory());
         poolExecutor.submit(serialMonitorRunnable);
         poolExecutor.submit(sendMsgRunnable);
         onSubmitRunnable();
@@ -121,6 +219,16 @@ public abstract class AbstractSerial extends Thread {
      * 关闭串口
      */
     private void closeSerialPort() {
+        if (mOutputStream != null) {
+            try {
+                mOutputStream.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (serialPort != null) {
+            serialPort.close();
+        }
         if (serialCom != null) {
             serialCom.Close();
         }

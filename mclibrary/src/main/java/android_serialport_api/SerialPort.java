@@ -14,12 +14,9 @@
  * limitations under the License. 
  */
 
-package android_serialport_api;
+package android.serialport;
 
 import android.util.Log;
-
-
-
 import java.io.File;
 import java.io.FileDescriptor;
 import java.io.FileInputStream;
@@ -30,56 +27,87 @@ import java.io.OutputStream;
 
 public class SerialPort {
 
-	private static final String TAG = "SerialPort";
-	private FileDescriptor mFd;
-	private InputStream inputStream;
-	private OutputStream outputStream;
+    private static final String TAG = "SerialPort";
 
-	public SerialPort(File device, int baudrate, int flags) throws SecurityException, IOException {
+    private static final String DEFAULT_SU_PATH = "/system/bin/su";
+
+    private static String sSuPath = DEFAULT_SU_PATH;
+
+    /**
+     * Set the su binary path, the default su binary path is {@link #DEFAULT_SU_PATH}
+     *
+     * @param suPath su binary path
+     */
+    public static void setSuPath(String suPath) {
+        if (suPath == null) {
+            return;
+        }
+        sSuPath = suPath;
+    }
+
+    /*
+         * Do not remove or rename the field mFd: it is used by native method close();
+         */
+    private FileDescriptor mFd;
+    private FileInputStream mFileInputStream;
+    private FileOutputStream mFileOutputStream;
+
+    public SerialPort(File device, int baudrate, int flags) throws SecurityException, IOException {
 
 		/* Check access permission */
-		if (!device.canRead() || !device.canWrite()) {
-			try {
-				Process su;
-				su = Runtime.getRuntime().exec("/system/bin/su");
-				String cmd = "chmod 666 " + device.getAbsolutePath() + "\n" + "exit\n";
-				su.getOutputStream().write(cmd.getBytes());
-				if ((su.waitFor() != 0) || !device.canRead() || !device.canWrite()) {
-					throw new SecurityException();
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
+        if (!device.canRead() || !device.canWrite()) {
+            try {
+                /* Missing read/write permission, trying to chmod the file */
+                Process su;
+                su = Runtime.getRuntime().exec(sSuPath);
+                String cmd = "chmod 666 " + device.getAbsolutePath() + "\n" + "exit\n";
+                su.getOutputStream().write(cmd.getBytes());
+                if ((su.waitFor() != 0) || !device.canRead() || !device.canWrite()) {
+                    throw new SecurityException();
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new SecurityException();
+            }
+        }
 
-		mFd = open(device.getAbsolutePath(), baudrate, flags);
-		if (mFd == null) {
-			Log.e(TAG, "native open returns null");
-			throw new IOException();
-		}
+        mFd = open(device.getAbsolutePath(), baudrate, flags);
+        if (mFd == null) {
+            Log.e(TAG, "native open returns null");
+            throw new IOException();
+        }
+        mFileInputStream = new FileInputStream(mFd);
+        mFileOutputStream = new FileOutputStream(mFd);
+    }
 
-		inputStream = new FileInputStream(mFd);
-		outputStream = new FileOutputStream(mFd);
-	}
+    public SerialPort(String devicePath, int baudrate, int flags)
+        throws SecurityException, IOException {
+        this(new File(devicePath), baudrate, flags);
+    }
 
-	protected FileDescriptor getFd(){
-		return mFd;
-	}
+    public SerialPort(File device, int baudrate) throws SecurityException, IOException {
+        this(device, baudrate, 0);
+    }
 
-	public InputStream getInputStream(){
-		return inputStream;
-	}
+    public SerialPort(String devicePath, int baudrate) throws SecurityException, IOException {
+        this(new File(devicePath), baudrate, 0);
+    }
 
-	public OutputStream getOutputStream(){
-		return outputStream;
-	}
+    // Getters and setters
+    public InputStream getInputStream() {
+        return mFileInputStream;
+    }
 
-	// JNI
-	private native static FileDescriptor open(String path, int baudrate, int flags);
+    public OutputStream getOutputStream() {
+        return mFileOutputStream;
+    }
 
-	public native void close();
+    // JNI
+    private native static FileDescriptor open(String path, int baudrate, int flags);
 
-	static {
-		System.loadLibrary("serial_port");
-	}
+    public native void close();
+
+    static {
+        System.loadLibrary("serial_port");
+    }
 }

@@ -4,12 +4,24 @@ public enum SerialError {
     /**
      * 线程异常
      */
-    RUNNABLE_ERROR(100, "runnable_error"),
+    RUNNABLE_ERROR_SEND(100, "send_runnable_error"),
+    RUNNABLE_ERROR_RECEIVER(101, "receiver_runnable_error"),
     /**
      * 串口打开出错
      */
-    SERIAL_OPEN_ERROR(101, "serial_open_error");
-
+    SERIAL_OPEN_ERROR(102, "serial_open_error"),
+    /**
+     * 配置出错
+     */
+    CONFIGURATION_ERROR_PORT(103, "configuration_error_port_baud_rate"),
+    /**
+     * XML文件出错
+     */
+    CONFIGURATION_ERROR_XML(104, "configuration_error_XML"),
+    /**
+     * 串口设备未找到
+     */
+    SERIAL_DEVICE_ERROR(105, "serial_device_error");
     private int code;
     private String errorInfo;
 
