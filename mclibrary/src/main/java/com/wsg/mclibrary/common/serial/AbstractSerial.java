@@ -44,7 +44,7 @@ public abstract class AbstractSerial extends Thread {
 
     private String[] serialDevices;
     private boolean isOpen;
-    private OutputStream mOutputStream;
+    public OutputStream mOutputStream;
 
     public SerialPort getSerialPort() {
         return serialPort;
@@ -121,6 +121,9 @@ public abstract class AbstractSerial extends Thread {
             mInputStream = new BufferedInputStream(serialPort.getInputStream());
             mOutputStream = serialPort.getOutputStream();
             isOpen = true;
+            if (serialConfig.getSerialListener() != null) {
+                serialConfig.getSerialListener().onSerialInitComplete(0);
+            }
         } catch (IOException e) {
             serialError(102, SerialError.getCodeErrorInfo(102));
             isOpen = false;
@@ -211,6 +214,7 @@ public abstract class AbstractSerial extends Thread {
 
     /**
      * 终止接收线程
+     *
      * @return
      */
     protected abstract boolean onTerminationReceiveRunnable();

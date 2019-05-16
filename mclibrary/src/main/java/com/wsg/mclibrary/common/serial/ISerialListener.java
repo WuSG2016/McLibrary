@@ -12,12 +12,6 @@ public interface ISerialListener {
      */
     void onSerialInitComplete(int openCode);
 
-    /**
-     * 串口加载失败
-     *
-     * @param openCode
-     */
-    void onSerialInitFail(int openCode);
 
     /**
      * 串口错误信息
