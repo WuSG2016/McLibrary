@@ -1,117 +1,63 @@
 package com.wsg.mclibrary.common.serial;
 
-
 import android.text.TextUtils;
-import android.util.Log;
 
-import com.wsg.mclibrary.common.CommonConstants;
 import com.wsg.mclibrary.common.config.ParseSerialFile;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Arrays;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+
 
 import android_serialport_api.SerialPort;
-import android_serialport_api.SerialPortFinder;
+
 
 /**
  * @author WuSG
  */
-public abstract class AbstractSerial extends Thread {
+public abstract class AbstractSerial extends BaseSerial {
+    private SerialMonitorRunnable serialMonitorRunnable;
+    private SendMsgRunnable sendMsgRunnable;
     /**
      * 波特率
      */
     private static int SERIAL_BAUD_RATE;
-
-
-    private SerialMonitorRunnable serialMonitorRunnable;
-
-    private SendMsgRunnable sendMsgRunnable;
-    protected BufferedInputStream mInputStream;
-
     /**
      * 串口
      */
     private static String PORT;
-
-
     private SerialPort serialPort;
-
-    private String[] serialDevices;
     private boolean isOpen;
-    public OutputStream mOutputStream;
-
-    public SerialPort getSerialPort() {
-        return serialPort;
-    }
+    protected OutputStream mOutputStream;
+    protected BufferedInputStream mInputStream;
 
 
-    protected ThreadPoolExecutor poolExecutor;
-    /**
-     * 串口配置
-     */
-    private SerialConfig serialConfig;
 
     @Override
     public void run() {
+        super.run();
         try {
-            if (checkSerial()) {
-                return;
-            }
-            initSerial();
+            initAndroidOfficial();
         } catch (Throwable throwable) {
             throwable.printStackTrace();
         }
     }
 
-    /**
-     * 检查设备是否包含串口
-     */
-    private boolean checkSerial() {
-        serialDevices = SerialPortFinder.getInstance().getAllDevices();
-        Log.e("checkSerial: ", Arrays.toString(serialDevices));
-        if (serialDevices.length <= 0) {
-            serialError(105, SerialError.getCodeErrorInfo(105));
-            return true;
-        }
-        return false;
-    }
-
-    private void initSerial() throws Throwable {
-        init();
-        connectSerialPort();
-    }
-
-    private void init() throws Throwable {
-        serialConfig = onSerialConfig();
-        if (serialConfig == null) {
-            serialError(102, SerialError.getCodeErrorInfo(102));
-        } else {
-            if (!TextUtils.isEmpty(serialConfig.getSerialXmlPath())) {
-                initSerialXml();
-            } else if (serialConfig.getPort() != null && serialConfig.getBaudRate() > 0) {
-                PORT = serialConfig.getPort();
-                SERIAL_BAUD_RATE = serialConfig.getBaudRate();
-            } else {
-                serialError(103, SerialError.getCodeErrorInfo(102));
-                return;
-            }
-            initAndroidOfficial();
-
-        }
-
-    }
 
     /**
      * Android官方串口
      */
     private void initAndroidOfficial() {
-
+        if (!TextUtils.isEmpty(serialConfig.getSerialXmlPath())) {
+            initSerialXml();
+        } else if (serialConfig.getPort() != null && serialConfig.getBaudRate() > 0) {
+            PORT = serialConfig.getPort();
+            SERIAL_BAUD_RATE = serialConfig.getBaudRate();
+        } else {
+            serialError(103, SerialError.getCodeErrorInfo(102));
+            return;
+        }
         try {
             if (isOpen) {
                 closeSerialPort();
@@ -124,6 +70,7 @@ public abstract class AbstractSerial extends Thread {
             if (serialConfig.getSerialListener() != null) {
                 serialConfig.getSerialListener().onSerialInitComplete(0);
             }
+            initRunnable();
         } catch (IOException e) {
             serialError(102, SerialError.getCodeErrorInfo(102));
             isOpen = false;
@@ -131,19 +78,6 @@ public abstract class AbstractSerial extends Thread {
         }
     }
 
-    private void serialError(int code, String errorMsg) {
-        if (serialConfig.getSerialListener() != null) {
-            serialConfig.getSerialListener().onSerialError(code, errorMsg);
-        }
-    }
-
-
-    /**
-     * 串口配置加载
-     *
-     * @return
-     */
-    protected abstract SerialConfig onSerialConfig();
 
     /**
      * 加载XML串口配置文件
@@ -167,23 +101,16 @@ public abstract class AbstractSerial extends Thread {
     }
 
     /**
-     * 连接到串口
+     * 初始化线程
      */
-    private void connectSerialPort() {
+    private void initRunnable() {
         serialMonitorRunnable = new SerialMonitorRunnable();
         sendMsgRunnable = new SendMsgRunnable();
-        poolExecutor = new ThreadPoolExecutor(10, 15, 30, TimeUnit.MINUTES, new LinkedBlockingDeque<Runnable>(), new SerialPortThreadFactory());
         poolExecutor.submit(serialMonitorRunnable);
         poolExecutor.submit(sendMsgRunnable);
         onSubmitRunnable();
 
     }
-
-    /**
-     * 用于添加线程
-     */
-    protected abstract void onSubmitRunnable();
-
 
     /**
      * 发送数据给串口
@@ -193,7 +120,7 @@ public abstract class AbstractSerial extends Thread {
         @Override
         public void run() {
             try {
-                while (onTerminationSendRunnable()) {
+                while (!onTerminationSend()) {
                     onSendMessage();
                 }
             } catch (Exception e) {
@@ -206,18 +133,18 @@ public abstract class AbstractSerial extends Thread {
     }
 
     /**
-     * 终止线程
+     * 是否终止发送线程
      *
      * @return
      */
-    protected abstract boolean onTerminationSendRunnable();
+    protected abstract boolean onTerminationSend();
 
     /**
-     * 终止接收线程
+     * 是否终止接收线程
      *
      * @return
      */
-    protected abstract boolean onTerminationReceiveRunnable();
+    protected abstract boolean onTerminationReceive();
 
     /**
      * 发送处理
@@ -251,7 +178,7 @@ public abstract class AbstractSerial extends Thread {
         @Override
         public void run() {
             try {
-                while (onTerminationReceiveRunnable()) {
+                while (!onTerminationReceive()) {
                     onReceiverSerialData();
                 }
             } catch (Exception e) {

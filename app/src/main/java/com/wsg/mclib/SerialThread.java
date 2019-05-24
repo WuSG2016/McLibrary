@@ -21,7 +21,7 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
     protected SerialConfig onSerialConfig() {
         return new SerialConfig.Builder()
                 .setBaudRate(9600)
-                .setPort("/dev/ttyS3")
+                .setPort("/dev/ttyO3")
                 .setSerialListener(this)
                 .builder();
 
@@ -32,23 +32,25 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
 
     }
 
-    @Override
-    protected boolean onTerminationSendRunnable() {
-        return true;
-    }
 
-    @Override
-    protected boolean onTerminationReceiveRunnable() {
-        return true;
-    }
 
     private byte[] bytes = new byte[]{(byte) 0x01, (byte) 0x05, (byte) 0x55, (byte) 0x5B, (byte) 0xff};
 
     @Override
+    protected boolean onTerminationSend() {
+        return false;
+    }
+
+    @Override
+    protected boolean onTerminationReceive() {
+        return false;
+    }
+
+    @Override
     protected void onSendMessage() {
-        if (getSerialPort() != null) {
+        if (mOutputStream != null) {
             try {
-                getSerialPort().getOutputStream().write(bytes);
+                mOutputStream.write(bytes);
                 Log.e("onSendMessage: ", "发送数据" + ByteUtils.byte2hex(bytes));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -58,14 +60,12 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
 
     }
 
-    private List<Byte> byteLists = new ArrayList<>();
 
     @Override
     protected void onReceiverSerialData() {
         byte[] received = new byte[1024];
         int size;
         while (true) {
-
             if (currentThread().isInterrupted()) {
                 break;
             }
@@ -76,37 +76,22 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
                 if (available > 0) {
                     size = mInputStream.read(received);
                     if (size > 0) {
-                        byte[] bytes= Arrays.copyOf(received,size);
-                        Log.e("收到数据",ByteUtils.byte2hex(bytes));
-
+                        byte[] bytes = Arrays.copyOf(received, size);
+                        Log.e("收到数据", ByteUtils.byte2hex(bytes));
                     }
                 } else {
                     // 暂停一点时间，免得一直循环造成CPU占用率过高
-                    SystemClock.sleep(100);
+                    SystemClock.sleep(1);
                 }
             } catch (IOException e) {
 
             }
-            //Thread.yield();
+
         }
 
-
-//        while (true) {
-//            final byte[] read = getSerialCom().Read();
-//            Log.e("onReceiverSerialData: ", ByteUtils.byte2hex(read));
-//        }
     }
-    /**
-     * 处理获取到的数据
-     *
-     * @param received
-     * @param size
-     */
-    private void onDataReceive(byte[] received, int size) {
-        // TODO: 2018/3/22 解决粘包、分包等
-        Log.e("收到数据",ByteUtils.byte2hex(received));
 
-    }
+
 
     @Override
     public void onSerialInitComplete(int openCode) {
@@ -114,14 +99,12 @@ public class SerialThread extends AbstractSerial implements ISerialListener {
 
     }
 
-    @Override
-    public void onSerialInitFail(int openCode) {
-
-    }
 
     @Override
     public void onSerialError(int code, String errorMsg) {
         Log.e("onSerialError: ", code + errorMsg);
 
     }
+
+
 }

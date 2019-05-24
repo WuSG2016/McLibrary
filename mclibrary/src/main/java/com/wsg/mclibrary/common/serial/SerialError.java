@@ -21,7 +21,12 @@ public enum SerialError {
     /**
      * 串口设备未找到
      */
-    SERIAL_DEVICE_ERROR(105, "serial_device_error");
+    SERIAL_DEVICE_ERROR(105, "serial_device_error"),
+    /**
+     * USB串口异常
+     */
+    USB_SERIAL_ERROR(106, "usb_serial_error"),
+    USB_SERIAL_OPEN_ERROR(107, "usb_serial_open_error");
     private int code;
     private String errorInfo;
 
