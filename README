@@ -9,7 +9,7 @@
 用于提交线程方法 比如循坏发送数据的线程等。
 ### 2.onSerialConfig
 返回串口配置实体 主要用于配置串口的监听器 波特率以及USB的VendorId和 ProductId 例如：
-```java
+```
  protected SerialConfig onSerialConfig() {
         return new SerialConfig.Builder()
                 .setSerialListener(this)
@@ -31,7 +31,7 @@
 在Android工程res目录下新建xml文件夹 文件名device_filer,
 内容格式如下图，其中就包含你USB的 vendor-id 和 product-id
 
-```java
+```
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- 0x0403 / 0x6001: FTDI FT232R UART -->
@@ -53,7 +53,7 @@
 
 ## 第三步：
 在你Android工程的清单文件里添加权限等 如图：
- ```java
+ ```
 <uses-feature android:name="android.hardware.usb.host" />
         <application
             android:allowBackup="true"
@@ -81,7 +81,7 @@
 
 ## 2.非USB转串口方式：
 方法类型和USB转串口相同，但是继承AbstractSerial 返回的SerialConfig配置不同 如图
-```java
+```
    protected SerialConfig onSerialConfig() {
         return new SerialConfig.Builder()
                 .setBaudRate(9600)
@@ -94,7 +94,7 @@
 同时还需重写onSendMessage用于发送数据 不需要执行USB转串口的第二步和第三步。
 
 ### ###使用方式 #根 build.gradle添加
-  ```groovy
+  ```
   allprojects {
 		repositories {
 			...
@@ -103,7 +103,7 @@
 	}
   ```
 ### #APP的build.gradle添加 Tag 当前版本
-   ```groovy
+   ```
    dependencies { 
            implementation 'com.github.WuSG2016:McLibrary:Tag'
  }
