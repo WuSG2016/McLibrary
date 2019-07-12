@@ -34,7 +34,7 @@ ProductId 例如：
 ### 4 onTerminationReceive 是否终止接收
 ### 5.onTerminationSend    是否终止发送
 ## 第二步：
- 在Android工程res目录下新建xml文件夹 文件名device_filer,
+ 在Android工程res目录下新建xml文件夹 文件名device_filter,
  内容格式如下图，其中就包含你USB的 vendor-id 和 product-id
  ```
  <?xml version="1.0" encoding="utf-8"?>
@@ -82,18 +82,15 @@ ProductId 例如：
          </application>
  ```
 ## 2.非USB转串口方式：
-方法和USB转串口相同，但是继承AbstractSerial 返回的SerialConfig配置不同 如
+方法和USB转串口相同，但是继承类AbstractSerial 返回的SerialConfig配置不同 如
 
 ```
  protected SerialConfig onSerialConfig() {
-        return new SerialConfig.Builder()
-                .setSerialListener(this)
+       return new SerialConfig.Builder()
                 .setBaudRate(9600)
-                .setVendorId(1659)
-                .setProductId(8963)
-                .setContext(App.application)
+                .setPort("/dev/ttyO3")
+                .setSerialListener(this)
                 .builder();
-
     }
 ```
 同时还需重写onSendMessage用于发送数据 不需要执行USB转串口的第二步和第三步。

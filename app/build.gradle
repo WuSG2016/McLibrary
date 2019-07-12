@@ -35,5 +35,5 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     //    implementation 'com.github.licheedev.Android-SerialPort-API:serialport:1.0.1'
     implementation 'com.google.guava:guava:27.0.1-android'
-    implementation project(':mclibrary')
+    implementation 'com.github.WuSG2016:McLibrary:1.25'
 }
