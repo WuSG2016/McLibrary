@@ -33,7 +33,6 @@ public abstract class AbstractSerial extends BaseSerial {
     protected BufferedInputStream mInputStream;
 
 
-
     @Override
     public void run() {
         super.run();
@@ -62,6 +61,9 @@ public abstract class AbstractSerial extends BaseSerial {
             if (isOpen) {
                 closeSerialPort();
                 isOpen = false;
+            }
+            if (serialConfig.getSuPath() != null && !serialConfig.getSuPath().isEmpty()) {
+                SerialPort.setSuPath(serialConfig.getSuPath());
             }
             serialPort = new SerialPort(new File(PORT), SERIAL_BAUD_RATE, 0);
             mInputStream = new BufferedInputStream(serialPort.getInputStream());

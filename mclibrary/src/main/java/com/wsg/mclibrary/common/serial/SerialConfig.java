@@ -22,6 +22,10 @@ public class SerialConfig {
      * 端口
      */
     private String port;
+    /**
+     * su路径
+     */
+    private String suPath;
 
     /**
      * 波特率
@@ -71,6 +75,10 @@ public class SerialConfig {
         return parity;
     }
 
+    public String getSuPath() {
+        return suPath;
+    }
+
     public int getVendorId() {
         return vendorId;
     }
@@ -91,6 +99,7 @@ public class SerialConfig {
         this.parity = builder.parity;
         this.vendorId = builder.vendorId;
         this.productId = builder.productId;
+        this.suPath = builder.suPath;
     }
 
     public ISerialListener getSerialListener() {
@@ -124,7 +133,10 @@ public class SerialConfig {
          * 端口
          */
         private String port;
-
+        /**
+         * su路径
+         */
+        private String suPath;
         /**
          * 波特率
          */
@@ -158,6 +170,11 @@ public class SerialConfig {
 
         public Builder setProductId(int productId) {
             this.productId = productId;
+            return this;
+        }
+
+        public Builder setSuPath(String suPath) {
+            this.suPath = suPath;
             return this;
         }
 

@@ -1,4 +1,4 @@
-
+[![Release](https://jitpack.io/v/WuSG2016/Mclibrary.svg)](https://jitpack.io/#WuSG2016/Mclibrary)
   MCLib库使用方式
 ============
 说明：`**当前版本 1.25**`
